@@ -7,32 +7,42 @@ jobs:
   build-windows:
     runs-on: windows-2022
     steps:
-      - name: 1. Baixar Codigo Fonte
+      - name: 1. Baixar Codigo Fonte do RustDesk
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: 2. Preparar Flutter
+      - name: 2. Baixar VCPKG Compativel
+        uses: actions/checkout@v4
+        with:
+          repository: microsoft/vcpkg
+          path: vcpkg
+          ref: a42af01b72c28c8e1d7b48104b33e4f286a558d7
+
+      - name: 3. Compilar Bibliotecas de Video
+        shell: cmd
+        run: |
+          cd vcpkg
+          bootstrap-vcpkg.bat
+          vcpkg install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static
+
+      - name: 4. Preparar Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: 5. Preparar Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           flutter-version: '3.24.x'
 
-      - name: 3. Preparar Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-msvc
+      - name: 6. Instalar Compiladores
+        run: choco install llvm innosetup -y
 
-      - name: 4. Instalar Compilador LLVM
-        run: choco install llvm -y
-
-      - name: 5. Compilar Bibliotecas de Video
-        run: |
-          vcpkg install libvpx libyuv opus --triplet x64-windows-static
-          echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
-
-      - name: 6. Gerar o .EXE Final
+      - name: 7. Gerar o .EXE Final
         env:
+          VCPKG_ROOT: ${{ github.workspace }}\vcpkg
           RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }}
           RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
         run: |
@@ -40,7 +50,7 @@ jobs:
           flutter pub get
           flutter build windows --release
 
-      - name: 7. Salvar o Executavel para Download
+      - name: 8. Salvar o Executavel para Download
         uses: actions/upload-artifact@v4
         with:
           name: Suporte-Remoto-Empresa
