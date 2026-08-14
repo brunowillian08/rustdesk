@@ -7,33 +7,31 @@ jobs:
   build-windows:
     runs-on: windows-2022
     steps:
-      - name: Checkout Code
+      - name: 1. Baixar Codigo Fonte
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-msvc
-
-      - name: Setup LLVM & InnoSetup
-        run: |
-          choco install llvm innosetup -y
-
-      - name: Setup VCPKG (Official Action)
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: 'a42af01b72c28c8e1d7b48104b33e4f286a558d7'
-          packages: 'libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static'
-
-      - name: Setup Flutter
+      - name: 2. Preparar Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           flutter-version: '3.24.x'
 
-      - name: Build Windows Executable
+      - name: 3. Preparar Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: 4. Instalar Compilador LLVM
+        run: choco install llvm -y
+
+      - name: 5. Compilar Bibliotecas de Video
+        run: |
+          vcpkg install libvpx libyuv opus --triplet x64-windows-static
+          echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
+
+      - name: 6. Gerar o .EXE Final
         env:
           RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }}
           RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
@@ -42,8 +40,8 @@ jobs:
           flutter pub get
           flutter build windows --release
 
-      - name: Upload Artifact
+      - name: 7. Salvar o Executavel para Download
         uses: actions/upload-artifact@v4
         with:
-          name: Suporte-Remoto-Windows
+          name: Suporte-Remoto-Empresa
           path: flutter/build/windows/x64/runner/Release/
