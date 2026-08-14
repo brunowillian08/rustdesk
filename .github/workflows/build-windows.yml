@@ -23,17 +23,19 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
-      - name: Setup LLVM/Clang
+      - name: Setup LLVM
         run: choco install llvm -y
 
-      - name: Setup VCPKG
+      - name: Install VCPKG Dependencies
         run: |
-          vcpkg install libvpx:x64-windows libyuv:x64-windows opus:x64-windows
+          vcpkg --triplet x64-windows install libvpx libyuv opus
+          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
 
-      - name: Build Windows
+      - name: Build Flutter App
         env:
           RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }}
           RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
+          VCPKG_ROOT: C:\vcpkg
         run: |
           cd flutter
           flutter pub get
